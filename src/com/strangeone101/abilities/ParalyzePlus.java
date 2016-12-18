@@ -1,0 +1,181 @@
+package com.strangeone101.abilities;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Sound;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import com.projectkorra.projectkorra.ProjectKorra;
+import com.projectkorra.projectkorra.ability.AddonAbility;
+import com.projectkorra.projectkorra.ability.ChiAbility;
+import com.projectkorra.projectkorra.configuration.ConfigManager;
+import com.projectkorra.projectkorra.util.ParticleEffect;
+
+public class ParalyzePlus extends ChiAbility implements AddonAbility 
+{
+	public static Map<Player, Long> paralyzedTimes = new ConcurrentHashMap<Player, Long>();
+	public static Map<Player, Boolean> isShifting = new ConcurrentHashMap<Player, Boolean>();
+	
+	public static long duration;
+	public static long cooldown;
+	public static int maxHits;
+	public static float hitRate;
+	public static boolean slownessEnabled;
+	public static int slownessLvl;
+	public static long slownessDuration;
+	
+	public static final String moveName = "Paralyze";
+	
+	public static boolean is1_9 = false;
+	
+	public ParalyzePlus(Player player, final LivingEntity target, final boolean isShift)
+	{
+		super(player);
+		if (!bPlayer.canBend(this)) {
+			remove();
+			return;
+		}
+		if (target instanceof Player) {
+			if (isShift) {
+				isShifting.put((Player) target, ((Player) target).isSneaking());
+			}
+			paralyzedTimes.put((Player) target, duration);
+		}
+		
+		if (slownessEnabled) {
+			if (target instanceof Player) {
+				target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, (int) (slownessDuration / 50), slownessLvl));
+			} else {
+				target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, (int) (slownessDuration / 50), 10));
+			}
+		}
+		
+		spawnParticles(target.getLocation().clone().add(0, 1, 0), 50, isShift);
+		if (is1_9) {
+			target.getWorld().playSound(target.getLocation(), Sound.valueOf("BLOCK_LEVER_CLICK"), 1, 2);
+		} else {
+			target.getWorld().playSound(target.getLocation(), Sound.valueOf("CLICK"), 1, 2);
+		}
+		bPlayer.addCooldown(this);
+		
+		new BukkitRunnable() {
+
+			@Override
+			public void run() {
+				paralyzedTimes.remove(target);
+				if (isShift && target instanceof Player) {
+					Player p = (Player) target;
+					p.setSneaking(isShifting.get(p));
+					isShifting.remove(p);
+				}
+			}
+			
+		}.runTaskLater(ProjectKorra.plugin, duration / 50);
+		
+		remove();
+	}
+	
+	@Override
+	public long getCooldown() 
+	{
+		return cooldown;
+	}
+
+	@Override
+	public Location getLocation() {
+		return player.getLocation();
+	}
+
+	@Override
+	public String getName() {
+		return moveName;
+	}
+
+	@Override
+	public boolean isHarmlessAbility() {
+		return false;
+	}
+
+	@Override
+	public boolean isSneakAbility() {
+		return true;
+	}
+
+	@Override
+	public void progress() 
+	{
+		remove();
+	}
+
+	@Override
+	public String getAuthor() {
+		return "StrangeOne101";
+	}
+
+	@Override
+	public String getVersion() {
+		return "1.0.1";
+	}
+	
+	@Override
+	public String getDescription() {
+		return "Hit benders to paralyze them. If you hit them normally, they will be slowed and won't be "
+				+ "able to click to bend. If you hit them while holding sneak, they won't be able to use "
+				+ "sneak to bend for a while. This move has a long cooldown.";
+	}
+
+	@Override
+	public void load() 
+	{
+		new ParalyzeListener();
+		
+		ProjectKorra.log.info(getName() + " by " + getAuthor() + " v" + getVersion() + " loaded!");
+		
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Duration", 3200L);
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Cooldown", 8000L);
+		//ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.MaxHits", 3);
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Enabled", true);
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Duration", 3200);
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Level", 2);
+		
+		ConfigManager.defaultConfig.save();
+		
+		duration = ConfigManager.defaultConfig.get().getLong("ExtraAbilities.StrangeOne101.Paralyze.Duration");
+		cooldown = ConfigManager.defaultConfig.get().getLong("ExtraAbilities.StrangeOne101.Paralyze.Cooldown");
+		//maxHits = ConfigManager.defaultConfig.get().getInt("ExtraAbilities.StrangeOne101.Paralyze.MaxHits");
+		slownessEnabled = ConfigManager.defaultConfig.get().getBoolean("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Enabled");
+		slownessLvl = ConfigManager.defaultConfig.get().getInt("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Level") - 1;
+		slownessDuration = ConfigManager.defaultConfig.get().getLong("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Duration");
+	
+		Integer version = Integer.valueOf(Bukkit.getServer().getClass().getPackage().getName().replace(".",  ",").split(",")[3].charAt(3));
+		
+		is1_9 = version >= 9;
+	}
+
+	@Override
+	public void stop() {
+		for (Player p : isShifting.keySet()) {
+			p.setSneaking(isShifting.get(p));
+		}
+	}	
+	
+	public static void spawnParticles(Location block, int count, boolean isShift)
+	{
+		ParticleEffect.CRIT.display(0.1F, 0.1F, 0.1F, 1, count, block, 32);
+		if (isShift) {
+			ParticleEffect.MAGIC_CRIT.display(0.1F, 0.1F, 0.1F, 1, count / 2, block, 32);
+		}
+	}
+	
+	@Override
+	public boolean isEnabled() {
+		return true;
+	}
+}
