@@ -12,6 +12,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import com.projectkorra.projectkorra.GeneralMethods;
 import com.projectkorra.projectkorra.ProjectKorra;
 import com.projectkorra.projectkorra.ability.AddonAbility;
 import com.projectkorra.projectkorra.ability.ChiAbility;
@@ -20,8 +21,15 @@ import com.projectkorra.projectkorra.util.ParticleEffect;
 
 public class ParalyzePlus extends ChiAbility implements AddonAbility 
 {
-	public static Map<Player, Long> paralyzedTimes = new ConcurrentHashMap<Player, Long>();
+	public static Map<Integer, Long> paralyzedTimes = new ConcurrentHashMap<Integer, Long>();
+	public static Map<Integer, BukkitRunnable> paralyzedRunnables = new ConcurrentHashMap<Integer, BukkitRunnable>();
+	
+	//Records the current players shift state
 	public static Map<Player, Boolean> isShifting = new ConcurrentHashMap<Player, Boolean>();
+	
+	public enum ParalyzeState {SNEAK, CLICK, BOTH};
+	
+	public static Map<Integer, ParalyzeState> paralyzed = new ConcurrentHashMap<Integer, ParalyzeState>();
 	
 	public static long duration;
 	public static long cooldown;
@@ -35,49 +43,69 @@ public class ParalyzePlus extends ChiAbility implements AddonAbility
 	
 	public static boolean is1_9 = false;
 	
-	public ParalyzePlus(Player player, final LivingEntity target, final boolean isShift)
+	public ParalyzePlus(Player player, final LivingEntity target, boolean isShift)
 	{
 		super(player);
 		if (!bPlayer.canBend(this)) {
-			remove();
 			return;
 		}
-		if (target instanceof Player) {
-			if (isShift) {
-				isShifting.put((Player) target, ((Player) target).isSneaking());
-			}
-			paralyzedTimes.put((Player) target, duration);
+		
+		if (!ConfigManager.defaultConfig.get().getBoolean("Properties.Chi.CanBendWithWeapons") && GeneralMethods.isWeapon(player.getInventory().getItemInMainHand().getType())) {
+			return;
 		}
+		
+		if (paralyzed.containsKey(target.getEntityId())) {
+			paralyzed.put(target.getEntityId(), ParalyzeState.BOTH);
+			paralyzedRunnables.get(target.getEntityId()).cancel();
+		} else {
+			paralyzed.put(target.getEntityId(), isShift ? ParalyzeState.SNEAK : ParalyzeState.CLICK);
+		}
+		
+		paralyzedTimes.put(target.getEntityId(), duration);
 		
 		if (slownessEnabled) {
 			if (target instanceof Player) {
 				target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, (int) (slownessDuration / 50), slownessLvl));
 			} else {
-				target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, (int) (slownessDuration / 50), 10));
+				target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, (int) (slownessDuration / 50), slownessLvl + (isShift ? 1 : 0)));
 			}
 		}
 		
 		spawnParticles(target.getLocation().clone().add(0, 1, 0), 50, isShift);
-		if (is1_9) {
-			target.getWorld().playSound(target.getLocation(), Sound.valueOf("BLOCK_LEVER_CLICK"), 1, 2);
-		} else {
-			target.getWorld().playSound(target.getLocation(), Sound.valueOf("CLICK"), 1, 2);
+		
+		for (int i = 0; i < 3; i++) {
+			new BukkitRunnable() {
+				@Override
+				public void run() {
+					if (is1_9) {
+						target.getWorld().playSound(target.getLocation(), Sound.valueOf("BLOCK_LEVER_CLICK"), 1, 2);
+					} else {
+						target.getWorld().playSound(target.getLocation(), Sound.valueOf("CLICK"), 1, 2);
+					}
+				}
+			}.runTaskLater(ProjectKorra.plugin, i * 2);
 		}
+		
 		bPlayer.addCooldown(this);
 		
-		new BukkitRunnable() {
+		paralyzedRunnables.put(target.getEntityId(), new BukkitRunnable() {
 
 			@Override
 			public void run() {
-				paralyzedTimes.remove(target);
-				if (isShift && target instanceof Player) {
+				ParalyzeState state = paralyzed.get(target.getEntityId());
+				paralyzedTimes.remove(target.getEntityId());
+				paralyzedRunnables.remove(target.getEntityId());
+				paralyzed.remove(target.getEntityId());
+				
+				if ((state == ParalyzeState.SNEAK || state == ParalyzeState.BOTH) && target instanceof Player) {
 					Player p = (Player) target;
 					p.setSneaking(isShifting.get(p));
 					isShifting.remove(p);
 				}
 			}
 			
-		}.runTaskLater(ProjectKorra.plugin, duration / 50);
+		});
+		paralyzedRunnables.get(target.getEntityId()).runTaskLater(ProjectKorra.plugin, duration / 50);
 		
 		remove();
 	}
@@ -121,7 +149,7 @@ public class ParalyzePlus extends ChiAbility implements AddonAbility
 
 	@Override
 	public String getVersion() {
-		return "1.0.1";
+		return "1.2";
 	}
 	
 	@Override
@@ -138,11 +166,11 @@ public class ParalyzePlus extends ChiAbility implements AddonAbility
 		
 		ProjectKorra.log.info(getName() + " by " + getAuthor() + " v" + getVersion() + " loaded!");
 		
-		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Duration", 3200L);
-		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Cooldown", 8000L);
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Duration", 6500L);
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Cooldown", 9000L);
 		//ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.MaxHits", 3);
 		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Enabled", true);
-		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Duration", 3200);
+		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Duration", 6500);
 		ConfigManager.defaultConfig.get().addDefault("ExtraAbilities.StrangeOne101.Paralyze.Slowness.Level", 2);
 		
 		ConfigManager.defaultConfig.save();
