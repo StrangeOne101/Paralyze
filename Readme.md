@@ -27,6 +27,3 @@ ExtraAbilities:
 * Spigot 1.8 - 1.11.2
 
 (Make sure the ProjectKorra version you have is compatible with your version of spigot)
-
-### Lisense
-You can copy, edit and redistribute all the code for JackOSplosion as long as you keep StrangeOne101 as one of the original authors. You may use parts of this code for your own abilities or plugins but don't have to credit me as long as your project isn't based off this one.
