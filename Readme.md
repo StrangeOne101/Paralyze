@@ -1,6 +1,8 @@
 # Realistic Paralyze
 Realistic Paralyze is much like normal paralyze apart from instead of completely blocking a players chi, it blocks their actions instead. This ability was based of the Realistic Paralyze thread by Finn_Bueno_. Thanks to him for this amazing idea.
 
+![gif](http://i.imgur.com/ofk9ZYI.gif)
+
 ### How to Use
 Simply hit another bender. If you are sneaking when you hit them, their sneaking will be disabled. If you aren't sneaking, their click will be disabled. Additionally, they will also be given slowness (which can be configured).
 
@@ -27,3 +29,6 @@ ExtraAbilities:
 * Spigot 1.8 - 1.11.2
 
 (Make sure the ProjectKorra version you have is compatible with your version of spigot)
+
+### License
+You can copy, edit and redistribute all the code for Realistic Paralyze as long as you keep StrangeOne101 as one of the original authors. You may use parts of this code for your own abilities or plugins but don't have to credit me as long as your project isn't based off this one.
