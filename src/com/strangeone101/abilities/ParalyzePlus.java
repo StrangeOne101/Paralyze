@@ -196,9 +196,9 @@ public class ParalyzePlus extends ChiAbility implements AddonAbility
 	
 	public static void spawnParticles(Location block, int count, boolean isShift)
 	{
-		ParticleEffect.CRIT.display(0.1F, 0.1F, 0.1F, 1, count, block, 32);
+		ParticleEffect.CRIT.display(block, count, 0.1, 0.1, 0.1, 1, 32);
 		if (isShift) {
-			ParticleEffect.MAGIC_CRIT.display(0.1F, 0.1F, 0.1F, 1, count / 2, block, 32);
+			ParticleEffect.CRIT_MAGIC.display(block, count / 2, 0.1, 0.1, 0.1, 1, 32);
 		}
 	}
 	

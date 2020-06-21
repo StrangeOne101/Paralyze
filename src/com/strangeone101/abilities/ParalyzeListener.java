@@ -46,7 +46,7 @@ public class ParalyzeListener implements Listener
 			}
 		} else if (e.getDamager() instanceof LivingEntity) {
 			if (ParalyzePlus.paralyzed.containsKey(e.getDamager().getEntityId())) {
-				ParticleEffect.SMOKE.display(0.4F, 0.4F, 0.4F, 0.02F, 10, e.getDamager().getLocation().clone().add(0, 0.9, 0), 80);
+				ParticleEffect.SMOKE_NORMAL.display(e.getDamager().getLocation().clone().add(0, 0.9, 0), 10, 0.4, 0.4, 0.4, 0.02, 80);
 				e.setCancelled(true);
 			}
 		}
@@ -59,7 +59,8 @@ public class ParalyzeListener implements Listener
 		if (ParalyzePlus.paralyzed.containsKey(e.getPlayer().getEntityId())) {
 			ParalyzeState state = ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId());
 			if (state == ParalyzeState.CLICK || state == ParalyzeState.BOTH) {
-				ParticleEffect.SMOKE.display(0.4F, 0.4F, 0.4F, 0.02F, 5, e.getPlayer().getLocation().clone().add(0, 0.9, 0), 80);
+				Bukkit.broadcastMessage("state");
+				ParticleEffect.SMOKE_NORMAL.display(e.getPlayer().getLocation().clone().add(0, 0.9, 0), 5, 0.4, 0.4, 0.F, 0.02F, 80);
 				e.getPlayer().getWorld().playSound(e.getPlayer().getLocation(), Sound.ENTITY_PLAYER_ATTACK_WEAK, 1F, 1.2F);
 				e.setCancelled(true);
 			}
@@ -86,7 +87,7 @@ public class ParalyzeListener implements Listener
 		if (e.getPlayer() != null && ParalyzePlus.paralyzed.containsKey(e.getPlayer().getEntityId())) {
 			ParalyzeState state = ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId());
 			if (state == ParalyzeState.CLICK || state == ParalyzeState.BOTH) {
-				ParticleEffect.SMOKE.display(0.4F, 0.4F, 0.4F, 0.02F, 10, e.getPlayer().getLocation().clone().add(0, 0.9, 0), 80);
+				ParticleEffect.SMOKE_NORMAL.display(e.getPlayer().getLocation().clone().add(0, 0.9, 0), 10, 0.4, 0.4, 0.4, 0.02F, 80);
 				e.setCancelled(true);
 			}
 		}
@@ -99,7 +100,7 @@ public class ParalyzeListener implements Listener
 			ParalyzeState state = ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId());
 			if (state == ParalyzeState.SNEAK || state == ParalyzeState.BOTH) {
 				ParalyzePlus.isShifting.put(e.getPlayer(), e.isSneaking());
-				ParticleEffect.SMOKE.display(0.4F, 0.4F, 0.4F, 0.02F, 10, e.getPlayer().getLocation().clone().add(0, 0.5, 0), 80);
+				ParticleEffect.SMOKE_NORMAL.display(e.getPlayer().getLocation().clone().add(0, 0.5, 0), 10, 0.4, 0.4, 0.4, 0.02, 80);
 				e.setCancelled(true);
 			}
 		}
