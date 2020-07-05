@@ -59,7 +59,6 @@ public class ParalyzeListener implements Listener
 		if (ParalyzePlus.paralyzed.containsKey(e.getPlayer().getEntityId())) {
 			ParalyzeState state = ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId());
 			if (state == ParalyzeState.CLICK || state == ParalyzeState.BOTH) {
-				Bukkit.broadcastMessage("state");
 				ParticleEffect.SMOKE_NORMAL.display(e.getPlayer().getLocation().clone().add(0, 0.9, 0), 5, 0.4, 0.4, 0.F, 0.02F, 80);
 				e.getPlayer().getWorld().playSound(e.getPlayer().getLocation(), Sound.ENTITY_PLAYER_ATTACK_WEAK, 1F, 1.2F);
 				e.setCancelled(true);
