@@ -20,6 +20,7 @@ import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import com.projectkorra.projectkorra.BendingPlayer;
 import com.projectkorra.projectkorra.ProjectKorra;
@@ -33,7 +34,7 @@ import com.strangeone101.abilities.ParalyzePlus.ParalyzeState;
 
 public class ParalyzeListener implements Listener
 {
-	private HashMap<Player, HashMap<String, BukkitRunnable>> blockedAbils = new HashMap();
+	private HashMap<Player, HashMap<String, BukkitTask>> blockedAbils = new HashMap();
 	private HashMap<Player, Integer> bottles = new HashMap();
 	
 	public ParalyzeListener()
@@ -93,7 +94,7 @@ public class ParalyzeListener implements Listener
 		Player player = event.getPlayer();
 		
 		if(!blockedAbils.containsKey(player)) return;
-		HashMap<String, BukkitRunnable> abils = blockedAbils.get(player);
+		HashMap<String, BukkitTask> abils = blockedAbils.get(player);
 		if(!abils.containsKey(abil)) return;
 		
 		event.setCancelled(true);
@@ -105,7 +106,7 @@ public class ParalyzeListener implements Listener
 		Player player = abil.getPlayer();
 		
 		if(!blockedAbils.containsKey(player)) return;
-		HashMap<String, BukkitRunnable> abils = blockedAbils.get(player);
+		HashMap<String, BukkitTask> abils = blockedAbils.get(player);
 		if(!abils.containsKey(abil.getName())) return;
 		
 		event.setCancelled(true);
@@ -156,40 +157,41 @@ public class ParalyzeListener implements Listener
 				final BendingPlayer bp = BendingPlayer.getBendingPlayer(e.getPlayer());
 				if(bp == null) return;
 				
-				HashMap<String, BukkitRunnable> abils = new HashMap();
+				HashMap<String, BukkitTask> abils = new HashMap();
 				if(blockedAbils.containsKey(e.getPlayer())) abils = blockedAbils.get(e.getPlayer());
 				
 				int firstBottle = WaterReturn.firstWaterBottle(e.getPlayer().getInventory());
 				if(firstBottle > -1) bottles.put(e.getPlayer(), firstBottle);
 				
 				final String abil = bp.getBoundAbilityName();
+				BukkitRunnable runnable = new BukkitRunnable() {
+
+					@Override
+					public void run() {
+						blockedAbils.get(e.getPlayer()).remove(abil);
+						
+						if(bottles.containsKey(e.getPlayer())) {
+							int firstBottle = WaterReturn.firstWaterBottle(e.getPlayer().getInventory());
+							if(firstBottle != bottles.get(e.getPlayer())) {
+								 fillBottle(e.getPlayer());
+							}
+						}
+
+						bottles.remove(e.getPlayer());
+					}
+					
+				};
+				BukkitTask task = null;
 				if(abils.containsKey(abil)) {
 					//delay the runnable more.
-					BukkitRunnable runnable = abils.get(abil);
-					runnable.cancel();
-					runnable.runTaskLater(ProjectKorra.plugin, 2L);
+					task = abils.get(abil);
+					task.cancel();
+					task = runnable.runTaskLater(ProjectKorra.plugin, 2L);
 				} else {
-					BukkitRunnable runnable = new BukkitRunnable() {
-
-						@Override
-						public void run() {
-							blockedAbils.get(e.getPlayer()).remove(abil);
-							
-							if(bottles.containsKey(e.getPlayer())) {
-								int firstBottle = WaterReturn.firstWaterBottle(e.getPlayer().getInventory());
-								if(firstBottle != bottles.get(e.getPlayer())) {
-									 fillBottle(e.getPlayer());
-								}
-							}
-
-							bottles.remove(e.getPlayer());
-						}
-						
-					};
-					runnable.runTaskLater(ProjectKorra.plugin, 2L);
-					abils.put(abil, runnable);
-					blockedAbils.put(e.getPlayer(), abils);
+					task = runnable.runTaskLater(ProjectKorra.plugin, 2L);
 				}
+				abils.put(abil, task);
+				blockedAbils.put(e.getPlayer(), abils);
 			}
 		}
 	}
