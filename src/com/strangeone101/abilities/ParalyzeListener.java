@@ -1,6 +1,9 @@
 package com.strangeone101.abilities;
 
+import java.util.HashMap;
+
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -12,15 +15,25 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import com.projectkorra.projectkorra.BendingPlayer;
 import com.projectkorra.projectkorra.ProjectKorra;
+import com.projectkorra.projectkorra.ability.Ability;
 import com.projectkorra.projectkorra.ability.CoreAbility;
+import com.projectkorra.projectkorra.event.AbilityStartEvent;
+import com.projectkorra.projectkorra.event.PlayerCooldownChangeEvent;
 import com.projectkorra.projectkorra.util.ParticleEffect;
+import com.projectkorra.projectkorra.waterbending.util.WaterReturn;
 import com.strangeone101.abilities.ParalyzePlus.ParalyzeState;
 
 public class ParalyzeListener implements Listener
 {
+	HashMap<Player, HashMap<String, BukkitRunnable>> blockedAbils = new HashMap();
+	HashMap<Player, Integer> bottles = new HashMap();
+	
 	public ParalyzeListener()
 	{
 		Bukkit.getPluginManager().registerEvents(this, ProjectKorra.plugin);
@@ -64,7 +77,51 @@ public class ParalyzeListener implements Listener
 				e.setCancelled(true);
 			}
 		}
+	}
+	
+	@EventHandler
+	public void onCooldown(PlayerCooldownChangeEvent event) {
+		String abil = event.getAbility();
+		Player player = event.getPlayer();
 		
+		if(!blockedAbils.containsKey(player)) return;
+		HashMap<String, BukkitRunnable> abils = blockedAbils.get(player);
+		if(!abils.containsKey(abil)) return;
+		
+		event.setCancelled(true);
+	}
+	
+	@EventHandler
+	public void onAbility(AbilityStartEvent event) {
+		Ability abil = event.getAbility();
+		Player player = abil.getPlayer();
+		
+		if(!blockedAbils.containsKey(player)) return;
+		HashMap<String, BukkitRunnable> abils = blockedAbils.get(player);
+		if(!abils.containsKey(abil.getName())) return;
+		
+		event.setCancelled(true);
+	}
+	
+	private void fillBottle(Player player) {
+		final PlayerInventory inventory = player.getInventory();
+		final int index = inventory.first(Material.GLASS_BOTTLE);
+		if (index >= 0) {
+			final ItemStack item = inventory.getItem(index);
+
+			final ItemStack water = WaterReturn.waterBottleItem();
+
+			if (item.getAmount() == 1) {
+				inventory.setItem(index, water);
+			} else {
+				item.setAmount(item.getAmount() - 1);
+				inventory.setItem(index, item);
+				final HashMap<Integer, ItemStack> leftover = inventory.addItem(water);
+				for (final int left : leftover.keySet()) {
+					player.getWorld().dropItemNaturally(player.getLocation(), leftover.get(left));
+				}
+			}
+		}
 	}
 	
 	@EventHandler(priority = EventPriority.LOWEST)
@@ -75,19 +132,54 @@ public class ParalyzeListener implements Listener
 			if (state == ParalyzeState.CLICK || state == ParalyzeState.BOTH) {
 				e.setCancelled(true);
 			}
-			
 		}
 	}
 	
 	@EventHandler(priority = EventPriority.LOWEST)
-	public void onInteract(PlayerInteractEvent e) {
-		if (e.isCancelled()) return;
-
+	public void onInteract(final PlayerInteractEvent e) {
 		if (e.getPlayer() != null && ParalyzePlus.paralyzed.containsKey(e.getPlayer().getEntityId())) {
 			ParalyzeState state = ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId());
 			if (state == ParalyzeState.CLICK || state == ParalyzeState.BOTH) {
 				ParticleEffect.SMOKE_NORMAL.display(e.getPlayer().getLocation().clone().add(0, 0.9, 0), 10, 0.4, 0.4, 0.4, 0.02F, 80);
 				e.setCancelled(true);
+				
+				final BendingPlayer bp = BendingPlayer.getBendingPlayer(e.getPlayer());
+				if(bp == null) return;
+				
+				HashMap<String, BukkitRunnable> abils = new HashMap();
+				if(blockedAbils.containsKey(e.getPlayer())) abils = blockedAbils.get(e.getPlayer());
+				
+				int firstBottle = WaterReturn.firstWaterBottle(e.getPlayer().getInventory());
+				if(firstBottle > -1) bottles.put(e.getPlayer(), firstBottle);
+				
+				final String abil = bp.getBoundAbilityName();
+				if(abils.containsKey(abil)) {
+					//delay the runnable more.
+					BukkitRunnable runnable = abils.get(abil);
+					runnable.cancel();
+					runnable.runTaskLater(ProjectKorra.plugin, 2L);
+				} else {
+					BukkitRunnable runnable = new BukkitRunnable() {
+
+						@Override
+						public void run() {
+							blockedAbils.get(e.getPlayer()).remove(abil);
+							
+							if(bottles.containsKey(e.getPlayer())) {
+								int firstBottle = WaterReturn.firstWaterBottle(e.getPlayer().getInventory());
+								if(firstBottle != bottles.get(e.getPlayer())) {
+									 fillBottle(e.getPlayer());
+								}
+							}
+
+							bottles.remove(e.getPlayer());
+						}
+						
+					};
+					runnable.runTaskLater(ProjectKorra.plugin, 2L);
+					abils.put(abil, runnable);
+					blockedAbils.put(e.getPlayer(), abils);
+				}
 			}
 		}
 	}
