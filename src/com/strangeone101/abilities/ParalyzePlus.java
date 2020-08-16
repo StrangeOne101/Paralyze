@@ -62,6 +62,7 @@ public class ParalyzePlus extends ChiAbility implements AddonAbility
 		}
 		
 		paralyzedTimes.put(target.getEntityId(), duration);
+		if (isShift && target instanceof Player) isShifting.put((Player) target, ((Player) target).isSneaking());
 		
 		if (slownessEnabled) {
 			if (target instanceof Player) {
@@ -97,7 +98,7 @@ public class ParalyzePlus extends ChiAbility implements AddonAbility
 				paralyzedRunnables.remove(target.getEntityId());
 				paralyzed.remove(target.getEntityId());
 				
-				if ((state == ParalyzeState.SNEAK || state == ParalyzeState.BOTH) && target instanceof Player) {
+				if ((state == ParalyzeState.SNEAK || state == ParalyzeState.BOTH) && target instanceof Player && isShifting.containsKey((Player) target)) {
 					Player p = (Player) target;
 					p.setSneaking(isShifting.get(p));
 					isShifting.remove(p);
@@ -149,7 +150,7 @@ public class ParalyzePlus extends ChiAbility implements AddonAbility
 
 	@Override
 	public String getVersion() {
-		return "1.2";
+		return "1.3";
 	}
 	
 	@Override

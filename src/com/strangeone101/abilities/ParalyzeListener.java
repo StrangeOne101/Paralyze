@@ -2,7 +2,9 @@ package com.strangeone101.abilities;
 
 import java.util.HashMap;
 
+import com.projectkorra.projectkorra.util.ActionBar;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.LivingEntity;
@@ -31,12 +33,16 @@ import com.strangeone101.abilities.ParalyzePlus.ParalyzeState;
 
 public class ParalyzeListener implements Listener
 {
-	HashMap<Player, HashMap<String, BukkitRunnable>> blockedAbils = new HashMap();
-	HashMap<Player, Integer> bottles = new HashMap();
+	private HashMap<Player, HashMap<String, BukkitRunnable>> blockedAbils = new HashMap();
+	private HashMap<Player, Integer> bottles = new HashMap();
 	
 	public ParalyzeListener()
 	{
 		Bukkit.getPluginManager().registerEvents(this, ProjectKorra.plugin);
+	}
+
+	public String getActionbarMessage(ParalyzeState state) {
+		return ChatColor.GOLD + "* Your " + (state == ParalyzeState.CLICK ? "arms are" : (state == ParalyzeState.SNEAK ? "legs are" : "body is")) + " paralyzed! *";
 	}
 	
 	@EventHandler
@@ -46,6 +52,7 @@ public class ParalyzeListener implements Listener
 		if (e.getDamager() instanceof Player) {
 			if (!(e.getEntity() instanceof LivingEntity)) return;
 				if (ParalyzePlus.paralyzed.containsKey(e.getDamager().getEntityId())) {
+					ActionBar.sendActionBar(getActionbarMessage(ParalyzePlus.paralyzed.get(e.getDamager().getEntityId())), (Player) e.getDamager());
 					e.setCancelled(true);
 					return;
 				}
@@ -74,6 +81,7 @@ public class ParalyzeListener implements Listener
 			if (state == ParalyzeState.CLICK || state == ParalyzeState.BOTH) {
 				ParticleEffect.SMOKE_NORMAL.display(e.getPlayer().getLocation().clone().add(0, 0.9, 0), 5, 0.4, 0.4, 0.F, 0.02F, 80);
 				e.getPlayer().getWorld().playSound(e.getPlayer().getLocation(), Sound.ENTITY_PLAYER_ATTACK_WEAK, 1F, 1.2F);
+				ActionBar.sendActionBar(getActionbarMessage(ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId())), e.getPlayer());
 				e.setCancelled(true);
 			}
 		}
@@ -130,6 +138,7 @@ public class ParalyzeListener implements Listener
 		if (e.getPlayer() != null && ParalyzePlus.paralyzed.containsKey(e.getPlayer().getEntityId())) {
 			ParalyzeState state = ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId());
 			if (state == ParalyzeState.CLICK || state == ParalyzeState.BOTH) {
+				ActionBar.sendActionBar(getActionbarMessage(ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId())), e.getPlayer());
 				e.setCancelled(true);
 			}
 		}
@@ -141,6 +150,7 @@ public class ParalyzeListener implements Listener
 			ParalyzeState state = ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId());
 			if (state == ParalyzeState.CLICK || state == ParalyzeState.BOTH) {
 				ParticleEffect.SMOKE_NORMAL.display(e.getPlayer().getLocation().clone().add(0, 0.9, 0), 10, 0.4, 0.4, 0.4, 0.02F, 80);
+				ActionBar.sendActionBar(getActionbarMessage(ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId())), e.getPlayer());
 				e.setCancelled(true);
 				
 				final BendingPlayer bp = BendingPlayer.getBendingPlayer(e.getPlayer());
@@ -192,6 +202,7 @@ public class ParalyzeListener implements Listener
 			if (state == ParalyzeState.SNEAK || state == ParalyzeState.BOTH) {
 				ParalyzePlus.isShifting.put(e.getPlayer(), e.isSneaking());
 				ParticleEffect.SMOKE_NORMAL.display(e.getPlayer().getLocation().clone().add(0, 0.5, 0), 10, 0.4, 0.4, 0.4, 0.02, 80);
+				ActionBar.sendActionBar(getActionbarMessage(ParalyzePlus.paralyzed.get(e.getPlayer().getEntityId())), e.getPlayer());
 				e.setCancelled(true);
 			}
 		}
