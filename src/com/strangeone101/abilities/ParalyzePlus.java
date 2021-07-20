@@ -54,6 +54,12 @@ public class ParalyzePlus extends ChiAbility implements AddonAbility
 			return;
 		}
 		
+		start();
+		if(isRemoved()) {
+			// stop if cancelled
+			return;
+		}
+		
 		if (paralyzed.containsKey(target.getEntityId())) {
 			paralyzed.put(target.getEntityId(), ParalyzeState.BOTH);
 			paralyzedRunnables.get(target.getEntityId()).cancel();
